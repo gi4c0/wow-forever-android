@@ -55,6 +55,7 @@ android {
             mapOf(
                 "icon" to iconValue,
                 "roundIcon" to iconRoundValue,
+                "appLabel" to "@string/app_name",
             ),
         )
 
@@ -117,6 +118,14 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName(if (keystoreProperties != null) "release" else "debug")
+        }
+        // Release build that installs beside the official app (own package, data and launcher entry).
+        create("custom") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".custom"
+            versionNameSuffix = "-custom"
+            manifestPlaceholders["appLabel"] = "WoW Forever Custom"
+            matchingFallbacks += listOf("release")
         }
     }
 

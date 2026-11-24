@@ -1308,7 +1308,7 @@ private fun containerConfig(gameRoot: File, gpu: GpuProfile, screenSize: String,
         put("wineVersion", "$PROTON_VERSION-1")
         put("containerVariant", "bionic")
         put("fexcoreVersion", "2609-0")
-        put("drives", "D:/storage/emulated/0/DownloadE:/data/data/app.wowforever/storageG:${gameRoot.path}")
+        put("drives", "D:/storage/emulated/0/DownloadE:${Container.APP_DATA_DIR}/storageG:${gameRoot.path}")
         put("executablePath", "G:\\$FLAVOR_DIR\\$EXE_NAME")
         put("execArgs", "-d3d11")
         put("showFPS", true)
