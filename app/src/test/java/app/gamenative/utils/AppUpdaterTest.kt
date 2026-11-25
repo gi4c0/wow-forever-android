@@ -25,6 +25,13 @@ class AppUpdaterTest {
     }
 
     @Test
+    fun isNewer_forkBuildNumber_comparesFourthPart() {
+        assertTrue(AppUpdater.isNewer("v2.4.6.2", "2.4.6.1"))
+        assertTrue(AppUpdater.isNewer("v2.4.7.1", "2.4.6.9"))
+        assertFalse(AppUpdater.isNewer("v2.4.6.1", "2.4.6.1"))
+    }
+
+    @Test
     fun isNewer_sameVersion_returnsFalse() {
         assertFalse(AppUpdater.isNewer("v2.1.2", "2.1.2"))
         assertFalse(AppUpdater.isNewer("2.1.2", "2.1.2"))

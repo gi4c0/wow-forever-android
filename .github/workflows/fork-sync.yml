@@ -1,0 +1,93 @@
+# Fork only: merges upstream (jaredgei/wow-forever-android main) into custom every 6 hours, then publishes a release
+# through fork-release.yml. Scheduled runs only happen when custom is the repository's default branch.
+#
+# On a merge conflict nothing is pushed; an issue lists the conflicting files. Merge by hand:
+#   git fetch origin && git merge origin/main   (origin = upstream), resolve, push to custom.
+#
+# Optional secret SYNC_TOKEN: a personal access token with repo + workflow scopes. The built-in token can't push
+# merges that change upstream's .github/workflows files; without SYNC_TOKEN those merges are reported as an issue.
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: fork-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    outputs:
+      merged: ${{ steps.merge.outputs.merged }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: custom
+          fetch-depth: 0
+          token: ${{ secrets.SYNC_TOKEN || github.token }}
+
+      - name: Merge upstream main
+        id: merge
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add upstream https://github.com/jaredgei/wow-forever-android.git
+          git fetch upstream main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date with upstream."
+            exit 0
+          fi
+          # [skip ci] keeps this push from also starting fork-release.yml; the release job below runs it once.
+          if ! git merge --no-ff --no-edit -m "Merge upstream main [skip ci]" upstream/main; then
+            {
+              echo "Merging upstream \`$(git rev-parse --short upstream/main)\` into \`custom\` has conflicts in:"
+              echo
+              git diff --name-only --diff-filter=U | sed 's/^/- `/; s/$/`/'
+              echo
+              echo 'Resolve locally: `git fetch origin && git merge origin/main`, then push to `custom`.'
+            } > problem.md
+            git merge --abort
+            echo "problem=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if ! git push origin HEAD:custom 2> push.err; then
+            cat push.err
+            {
+              echo "The upstream merge succeeded but pushing it to \`custom\` failed:"
+              echo
+              echo '```'
+              cat push.err
+              echo '```'
+              echo
+              echo 'If this mentions `workflows` permission, add a `SYNC_TOKEN` secret (personal access token with repo + workflow scopes), or merge and push locally.'
+            } > problem.md
+            echo "problem=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report the problem as an issue
+        if: steps.merge.outputs.problem == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          title="Upstream sync needs a manual merge"
+          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            echo "Issue #$existing is already open."
+          else
+            gh issue create --title "$title" --body-file problem.md
+          fi
+
+  release:
+    needs: sync
+    if: needs.sync.outputs.merged == 'true'
+    uses: ./.github/workflows/fork-release.yml
+    secrets: inherit

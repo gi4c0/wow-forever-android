@@ -19,6 +19,10 @@ val keystoreProperties: Properties? = if (keystorePropertiesFile.exists()) {
     }
 } else null
 
+// Fork release number on top of upstream's version: the custom build is versioned 2.4.6.N. CI passes -PforkBuild=N
+// (.github/workflows/fork-release.yml); local builds are .0.
+val forkBuild = (project.findProperty("forkBuild") as String?)?.toIntOrNull() ?: 0
+
 android {
     namespace = "app.gamenative"
     compileSdk = 36
@@ -44,6 +48,8 @@ android {
 
         manifestPlaceholders["screenOrientation"] = "unspecified"
         buildConfigField("boolean", "XR_BUILD", "false")
+        // GitHub repo whose latest release the in-app updater offers.
+        buildConfigField("String", "UPDATE_REPO", "\"jaredgei/wow-forever-android\"")
 
         versionCode = 254
         versionName = "2.4.6"
@@ -123,8 +129,9 @@ android {
         create("custom") {
             initWith(getByName("release"))
             applicationIdSuffix = ".custom"
-            versionNameSuffix = "-custom"
+            versionNameSuffix = ".$forkBuild"
             manifestPlaceholders["appLabel"] = "WoW Forever Custom"
+            buildConfigField("String", "UPDATE_REPO", "\"gi4c0/wow-forever-android\"")
             matchingFallbacks += listOf("release")
         }
     }
@@ -186,6 +193,14 @@ android {
         ignoreFormatFailures  = false
     }
 
+}
+
+// Fork releases must outrank each other: versionCode = upstream versionCode * 1000 + forkBuild.
+androidComponents {
+    onVariants(selector().withBuildType("custom")) { variant ->
+        val upstreamCode = android.defaultConfig.versionCode ?: 0
+        variant.outputs.forEach { it.versionCode.set(upstreamCode * 1000 + forkBuild) }
+    }
 }
 
 dependencies {
