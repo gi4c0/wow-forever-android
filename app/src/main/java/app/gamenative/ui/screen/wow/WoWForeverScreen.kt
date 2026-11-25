@@ -117,6 +117,8 @@ fun WoWForeverScreen(
     var isUpdating by remember { mutableStateOf(false) }
     var updateStatusText by remember { mutableStateOf("") }
     var appUpdate by remember { mutableStateOf<AppUpdater.Release?>(null) }
+    var upstreamSyncProblemUrl by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) { upstreamSyncProblemUrl = AppUpdater.upstreamSyncProblemUrl() }
     var isDownloadingAppUpdate by remember { mutableStateOf(false) }
     var appUpdateProgress by remember { mutableFloatStateOf(0f) }
     var showAppUpdateDialog by remember { mutableStateOf(false) }
@@ -573,6 +575,37 @@ fun WoWForeverScreen(
                             fontSize = 11.sp,
                             color = Color(0xFFCBD5E1)
                         )
+                    }
+                }
+            }
+
+            upstreamSyncProblemUrl?.let { url ->
+                Spacer(modifier = Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth(0.9f)
+                        .border(1.dp, Color(0xFFE57373).copy(alpha = 0.7f), RoundedCornerShape(16.dp)),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E2838).copy(alpha = 0.85f)),
+                    shape = RoundedCornerShape(16.dp),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        SectionTitle("UPSTREAM SYNC NEEDS A MANUAL MERGE", Color(0xFFE57373))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "The original app has changes that couldn't be merged into this version automatically. " +
+                                "No new releases until the merge is resolved.",
+                            fontSize = 12.sp,
+                            color = Color(0xFFCBD5E1),
+                            lineHeight = 16.sp,
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        PrimaryButton(text = "OPEN ISSUE", icon = Icons.Default.Public, enabled = true) {
+                            runCatching {
+                                context.startActivity(
+                                    android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)),
+                                )
+                            }
+                        }
                     }
                 }
             }

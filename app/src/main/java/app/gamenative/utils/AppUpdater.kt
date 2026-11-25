@@ -15,6 +15,8 @@ import timber.log.Timber
 
 object AppUpdater {
     private const val RELEASES_URL = "https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/latest"
+    private const val SYNC_ISSUES_URL = "https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/issues"
+    private const val SYNC_ISSUE_LABEL = "upstream-sync"
 
     data class Release(
         val version: String,
@@ -82,6 +84,30 @@ object AppUpdater {
             null
         }
     }
+
+    /** Web URL of the open issue fork-sync.yml files when an upstream merge needs a hand, or null if there is none. */
+    suspend fun upstreamSyncProblemUrl(): String? = withContext(Dispatchers.IO) {
+        if (!BuildConfig.CHECK_UPSTREAM_SYNC) return@withContext null
+        runCatching {
+            val request = Request.Builder()
+                .url("$SYNC_ISSUES_URL?state=open&labels=$SYNC_ISSUE_LABEL&per_page=1")
+                .header("User-Agent", "WoW-Forever-Android")
+                .header("Accept", "application/vnd.github+json")
+                .build()
+            Net.http.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val body = response.body?.string() ?: return@withContext null
+                parseSyncProblemUrl(body)
+            }
+        }.getOrElse {
+            Timber.w(it, "Upstream sync check failed")
+            null
+        }
+    }
+
+    fun parseSyncProblemUrl(issuesJson: String): String? = runCatching {
+        org.json.JSONArray(issuesJson).optJSONObject(0)?.optString("html_url")?.takeIf { it.isNotBlank() }
+    }.getOrNull()
 
     suspend fun download(
         context: Context,

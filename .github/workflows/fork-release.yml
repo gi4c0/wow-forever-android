@@ -137,6 +137,6 @@ jobs:
           notes=$(git log --no-merges --format='- %s' "$range" | head -50)
           gh release create "$TAG" WoW-Forever-Custom.apk \
             --target "$(git rev-parse HEAD)" \
-            --title "WoW Forever Custom ${TAG#v}" \
+            --title "WoW Forever ${TAG#v}" \
             --notes "${notes:-No changes listed.}" \
             --latest

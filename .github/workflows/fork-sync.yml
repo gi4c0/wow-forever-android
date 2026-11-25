@@ -1,7 +1,8 @@
 # Fork only: merges upstream (jaredgei/wow-forever-android main) into custom every 6 hours, then publishes a release
 # through fork-release.yml. Scheduled runs only happen when custom is the repository's default branch.
 #
-# On a merge conflict nothing is pushed; an issue lists the conflicting files. Merge by hand:
+# On a merge conflict nothing is pushed; an issue labelled upstream-sync lists the conflicting files, and the custom
+# app's launcher shows a warning while it is open. The next successful sync closes it. Merge by hand:
 #   git fetch origin && git merge origin/main   (origin = upstream), resolve, push to custom.
 #
 # Optional secret SYNC_TOKEN: a personal access token with repo + workflow scopes. The built-in token can't push
@@ -78,13 +79,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          title="Upstream sync needs a manual merge"
-          existing=$(gh issue list --state open --search "\"$title\" in:title" --json number --jq '.[0].number')
+          # The custom app looks for an open issue with this label and shows a warning in its launcher.
+          gh label create upstream-sync --color D93F0B --description "Upstream merge needs a hand" --force
+          existing=$(gh issue list --state open --label upstream-sync --json number --jq '.[0].number')
           if [ -n "$existing" ]; then
             echo "Issue #$existing is already open."
           else
-            gh issue create --title "$title" --body-file problem.md
+            gh issue create --title "Upstream sync needs a manual merge" --label upstream-sync --body-file problem.md
           fi
+
+      # Merged or already up to date: a past problem is solved, so the app's warning goes away.
+      - name: Close resolved sync issues
+        if: steps.merge.outputs.problem != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for n in $(gh issue list --state open --label upstream-sync --json number --jq '.[].number' 2> /dev/null); do
+            gh issue close "$n" --comment "custom is up to date with upstream main again."
+          done
 
   release:
     needs: sync

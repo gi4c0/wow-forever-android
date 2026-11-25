@@ -32,6 +32,16 @@ class AppUpdaterTest {
     }
 
     @Test
+    fun parseSyncProblemUrl_readsFirstOpenIssue() {
+        assertEquals(
+            "https://github.com/o/r/issues/7",
+            AppUpdater.parseSyncProblemUrl("""[{"number":7,"html_url":"https://github.com/o/r/issues/7"}]"""),
+        )
+        assertEquals(null, AppUpdater.parseSyncProblemUrl("[]"))
+        assertEquals(null, AppUpdater.parseSyncProblemUrl("not json"))
+    }
+
+    @Test
     fun isNewer_sameVersion_returnsFalse() {
         assertFalse(AppUpdater.isNewer("v2.1.2", "2.1.2"))
         assertFalse(AppUpdater.isNewer("2.1.2", "2.1.2"))

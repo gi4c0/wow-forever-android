@@ -50,6 +50,8 @@ android {
         buildConfigField("boolean", "XR_BUILD", "false")
         // GitHub repo whose latest release the in-app updater offers.
         buildConfigField("String", "UPDATE_REPO", "\"jaredgei/wow-forever-android\"")
+        // Fork builds warn in the launcher when the fork's upstream sync is stuck (.github/workflows/fork-sync.yml).
+        buildConfigField("boolean", "CHECK_UPSTREAM_SYNC", "false")
 
         versionCode = 254
         versionName = "2.4.6"
@@ -130,8 +132,9 @@ android {
             initWith(getByName("release"))
             applicationIdSuffix = ".custom"
             versionNameSuffix = ".$forkBuild"
-            manifestPlaceholders["appLabel"] = "WoW Forever Custom"
+            manifestPlaceholders["appLabel"] = "WoW Forever"
             buildConfigField("String", "UPDATE_REPO", "\"gi4c0/wow-forever-android\"")
+            buildConfigField("boolean", "CHECK_UPSTREAM_SYNC", "true")
             matchingFallbacks += listOf("release")
         }
     }
