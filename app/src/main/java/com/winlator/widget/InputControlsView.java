@@ -124,7 +124,6 @@ public class InputControlsView extends View {
 
     // Container-level shooter mode (auto-replaces STICK elements)
     private boolean containerShooterMode = false;
-    private boolean containerShooterModeRuntime = false; // runtime toggle state
 
     private final GyroController gyroController;
     private volatile boolean gyroEnabled;
@@ -282,7 +281,7 @@ public class InputControlsView extends View {
         }
 
         // Draw dynamic joysticks when shooter mode is active
-        boolean anyShooterActive = shooterModeActive || containerShooterModeRuntime;
+        boolean anyShooterActive = shooterModeActive || containerShooterMode;
         if (anyShooterActive && !editMode) {
             drawStickZoneOutline(canvas);
         }
@@ -293,11 +292,6 @@ public class InputControlsView extends View {
             float sizeMultiplier = getResolvedLookJoystickSize();
             drawDynamicJoystick(canvas, rightJoystickCenterX, rightJoystickCenterY,
                                 rightJoystickCurrentX, rightJoystickCurrentY, sizeMultiplier);
-        }
-
-        // Draw container shooter mode toggle button
-        if (containerShooterMode && isRuntimeToggleVisible() && !editMode) {
-            drawContainerShooterToggle(canvas);
         }
 
         super.onDraw(canvas);
@@ -635,11 +629,10 @@ public class InputControlsView extends View {
     }
 
     public void setContainerShooterMode(boolean enabled) {
-        if (containerShooterMode != enabled || containerShooterModeRuntime != enabled) {
+        if (containerShooterMode != enabled) {
             cancelTouchRouting();
         }
         this.containerShooterMode = enabled;
-        this.containerShooterModeRuntime = enabled;
         if (!enabled && !shooterModeActive) {
             releaseAllShooterInputs();
             commitGamepadState();
@@ -666,7 +659,7 @@ public class InputControlsView extends View {
     private void applyShooterMouseInputMode() {
         if (xServer == null || shooterModeConfig == null) return;
         boolean useWin32RelativeInput =
-                (shooterModeActive || containerShooterModeRuntime)
+                (shooterModeActive || containerShooterMode)
                         && ShooterModeConfig.LOOK_MOUSE.equals(getResolvedShooterLookType())
                         && shooterModeConfig.getWin32RelativeMouseInput();
         xServer.setRelativeMouseMovement(useWin32RelativeInput);
@@ -711,7 +704,7 @@ public class InputControlsView extends View {
 
     /** Check if a STICK element should be hidden because container shooter mode replaces it. */
     private boolean isStickHiddenByShooterMode(ControlElement element) {
-        if (!containerShooterModeRuntime) return false;
+        if (!containerShooterMode) return false;
         if (element.getType() != ControlElement.Type.STICK) return false;
         Binding b0 = element.getBindingAt(0);
         return b0 == Binding.GAMEPAD_LEFT_THUMB_UP || b0 == Binding.GAMEPAD_RIGHT_THUMB_UP;
@@ -727,7 +720,7 @@ public class InputControlsView extends View {
     }
 
     private String getResolvedShooterMovementType() {
-        if (containerShooterModeRuntime && shooterModeConfig != null) {
+        if (containerShooterMode && shooterModeConfig != null) {
             return shooterModeConfig.getMovementType();
         }
 
@@ -740,7 +733,7 @@ public class InputControlsView extends View {
     }
 
     private String getResolvedShooterLookType() {
-        if (containerShooterModeRuntime && shooterModeConfig != null) {
+        if (containerShooterMode && shooterModeConfig != null) {
             return shooterModeConfig.getLookType();
         }
 
@@ -796,10 +789,6 @@ public class InputControlsView extends View {
     private boolean isLookFloatingJoystickBehavior() {
         return shooterModeConfig != null &&
                 ShooterModeConfig.JOYSTICK_FLOATING.equals(shooterModeConfig.getLookJoystickBehavior());
-    }
-
-    private boolean isRuntimeToggleVisible() {
-        return shooterModeConfig == null || shooterModeConfig.getShowRuntimeToggle();
     }
 
     private float getJoystickOpacity() {
@@ -1079,43 +1068,6 @@ public class InputControlsView extends View {
         paint.setPathEffect(null);
     }
 
-    /** Get the bounding rect for the container shooter mode toggle button at top center. */
-    private android.graphics.RectF getToggleButtonRect() {
-        float btnW = snappingSize * 12;
-        float btnH = snappingSize * 4;
-        float cx = getWidth() / 2f;
-        return new android.graphics.RectF(cx - btnW / 2, snappingSize * 0.5f, cx + btnW / 2, snappingSize * 0.5f + btnH);
-    }
-
-    private void drawContainerShooterToggle(Canvas canvas) {
-        android.graphics.RectF rect = getToggleButtonRect();
-        float radius = snappingSize * 0.5f;
-        int primaryColor = getPrimaryColor();
-
-        // Background
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(ColorUtils.setAlphaComponent(containerShooterModeRuntime ? 0xFF0277BD : 0xFF616161,
-                        (int)(overlayOpacity * 200)));
-        canvas.drawRoundRect(rect, radius, radius, paint);
-
-        // Border
-        paint.setStyle(Paint.Style.STROKE);
-        paint.setStrokeWidth(snappingSize * 0.125f);
-        paint.setColor(primaryColor);
-        canvas.drawRoundRect(rect, radius, radius, paint);
-
-        // Text
-        paint.setStyle(Paint.Style.FILL);
-        paint.setColor(primaryColor);
-        paint.setTextSize(snappingSize * 1.8f);
-        paint.setTextAlign(Paint.Align.CENTER);
-        float textY = rect.centerY() - (paint.descent() + paint.ascent()) * 0.5f;
-        String label = getContext().getString(containerShooterModeRuntime
-                ? app.gamenative.R.string.shooter_mode_on
-                : app.gamenative.R.string.shooter_mode_off);
-        canvas.drawText(label, rect.centerX(), textY, paint);
-    }
-
     private void handleShooterJoystickMove(float x, float y) {
         float joystickSizeMultiplier = getResolvedMovementJoystickSize();
         String movementType = getResolvedShooterMovementType();
@@ -1291,25 +1243,7 @@ public class InputControlsView extends View {
     private boolean handleShooterTouchDown(int pointerId, float x, float y, boolean allowButtonLookThrough, long downTime) {
         boolean handled = false;
 
-        // Check container shooter mode toggle button first
-        if (containerShooterMode && isRuntimeToggleVisible()) {
-            android.graphics.RectF toggleRect = getToggleButtonRect();
-            if (toggleRect.contains(x, y)) {
-                cancelTouchRouting();
-                containerShooterModeRuntime = !containerShooterModeRuntime;
-                if (!containerShooterModeRuntime) {
-                    releaseAllShooterInputs();
-                    commitGamepadState();
-                }
-                applyShooterMouseInputMode();
-                performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY);
-                invalidate();
-                return true;
-            }
-        }
-
-        // If runtime is off (and no SHOOTER_MODE element active), only the toggle button above should handle
-        if (!shooterModeActive && !containerShooterModeRuntime) {
+        if (!shooterModeActive && !containerShooterMode) {
             return false;
         }
 
@@ -1546,7 +1480,7 @@ public class InputControlsView extends View {
                     float x = event.getX(actionIndex);
                     float y = event.getY(actionIndex);
 
-                    // Shooter mode intercept (use containerShooterMode so toggle button is always reachable)
+                    // Shooter mode intercept
                     if ((shooterModeActive || containerShooterMode)
                             && handleShooterTouchDown(pointerId, x, y, !touchscreenMode, event.getEventTime())) {
                         break;
@@ -1589,7 +1523,7 @@ public class InputControlsView extends View {
                         float y = event.getY(i);
 
                         // Shooter mode intercept per pointer
-                        if (shooterModeActive || containerShooterModeRuntime) {
+                        if (shooterModeActive || containerShooterMode) {
                             int pid = event.getPointerId(i);
                             if (handleTapThroughMove(pid, x, y, event.getEventTime())) continue;
                             if (touchpadPointers.get(pid)) continue;
@@ -1633,7 +1567,7 @@ public class InputControlsView extends View {
                         break;
                     }
                     // Shooter mode intercept
-                    if (shooterModeActive || containerShooterModeRuntime) {
+                    if (shooterModeActive || containerShooterMode) {
                         PendingButtonLook pending = pendingButtonLooks.get(pointerId);
                         if (pending != null) {
                             releasePendingButtonLook(pointerId);

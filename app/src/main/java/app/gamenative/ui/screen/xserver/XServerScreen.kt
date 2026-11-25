@@ -2510,32 +2510,11 @@ fun XServerScreen(
                     // Only auto-show if profile has on-screen elements
                     Timber.d("Profile has ${profile.elements.size} elements loaded")
                     if (profile.elements.isNotEmpty()) {
-                        // Check for ACTUAL physically connected controllers, not just saved bindings
-                        val controllerManager = ControllerManager.getInstance()
-                        controllerManager.scanForDevices()
-                        val hasPhysicalController = controllerManager.getDetectedDevices().isNotEmpty()
-
-                        // Determine if controls should be shown based on priority:
-                        // 1. If touchscreen mode is true → always hide
-                        // 2. Else if physical controller detected → hide
-                        // 3. Else if physical mouse/keyboard detected → hide
-                        // 4. Else → show
-                        val shouldShowControls = when {
-                            container.isTouchscreenMode -> false
-                            hasPhysicalController -> false
-                            hasPhysicalKeyboard || hasPhysicalMouse -> false
-                            else -> true
-                        }
-
-                        if (shouldShowControls) {
-                            Timber.d("Auto-showing onscreen controls")
-                            showInputControls(profile, xServerView.getxServer().winHandler, container)
-                            areControlsVisible = true
-                        } else {
-                            Timber.d("Hiding onscreen controls")
-                            hideInputControls()
-                            areControlsVisible = false
-                        }
+                        // On-screen controls always start shown, touchscreen mode included;
+                        // attaching a controller, keyboard or mouse later still hides them.
+                        Timber.d("Auto-showing onscreen controls")
+                        showInputControls(profile, xServerView.getxServer().winHandler, container)
+                        areControlsVisible = true
                     } else {
                         Timber.w("Profile has no elements - cannot auto-show controls")
                     }

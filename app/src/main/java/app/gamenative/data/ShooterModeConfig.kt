@@ -29,7 +29,6 @@ data class ShooterModeConfig(
     val movementJoystickBehavior: String = JOYSTICK_ANCHORED,
     val lookJoystickBehavior: String = JOYSTICK_ANCHORED,
     val joystickOpacity: Float = JOYSTICK_OPACITY_UNSET,
-    val showRuntimeToggle: Boolean = true,
     // Where touches spawn the movement and camera sticks; touches outside both act as plain mouse input.
     val movementZone: StickZone = DEFAULT_MOVEMENT_ZONE,
     val lookZone: StickZone = DEFAULT_LOOK_ZONE,
@@ -65,7 +64,6 @@ data class ShooterModeConfig(
             if (joystickOpacity > 0) {
                 put(KEY_JOYSTICK_OPACITY, joystickOpacity.toDouble())
             }
-            put(KEY_SHOW_RUNTIME_TOGGLE, showRuntimeToggle)
             put(KEY_JOYSTICK_SIZE, movementJoystickSize.toDouble())
             put(KEY_JOYSTICK_BEHAVIOR, movementJoystickBehavior)
             put(KEY_MOVEMENT_ZONE, movementZone.toJson())
@@ -141,7 +139,6 @@ data class ShooterModeConfig(
         private const val KEY_MOVEMENT_JOYSTICK_BEHAVIOR = "movementJoystickBehavior"
         private const val KEY_LOOK_JOYSTICK_BEHAVIOR = "lookJoystickBehavior"
         private const val KEY_JOYSTICK_OPACITY = "joystickOpacity"
-        private const val KEY_SHOW_RUNTIME_TOGGLE = "showRuntimeToggle"
         private const val KEY_MOUSE_ACCELERATION_ENABLED = "mouseAccelerationEnabled"
         private const val KEY_MOUSE_ACCELERATION_STRENGTH = "mouseAccelerationStrength"
         private const val KEY_MOUSE_ACCELERATION_MAX_MULTIPLIER = "mouseAccelerationMaxMultiplier"
@@ -262,7 +259,6 @@ data class ShooterModeConfig(
                     } else {
                         JOYSTICK_OPACITY_UNSET
                     },
-                    showRuntimeToggle = obj.optBoolean(KEY_SHOW_RUNTIME_TOGGLE, true),
                     movementZone = StickZone.fromJson(obj.optJSONObject(KEY_MOVEMENT_ZONE), legacyMovementZone),
                     lookZone = StickZone.fromJson(obj.optJSONObject(KEY_LOOK_ZONE), legacyLookZone),
                     showStickZoneOutline = obj.optBoolean(KEY_SHOW_STICK_ZONE_OUTLINE, true),
