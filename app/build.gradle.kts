@@ -53,8 +53,8 @@ android {
         // Fork builds warn in the launcher when the fork's upstream sync is stuck (.github/workflows/fork-sync.yml).
         buildConfigField("boolean", "CHECK_UPSTREAM_SYNC", "false")
 
-        versionCode = 256
-        versionName = "2.4.7-rc2"
+        versionCode = 257
+        versionName = "2.4.7"
 
         buildConfigField("boolean", "GOLD", "false")
         val iconValue = "@mipmap/ic_launcher"
